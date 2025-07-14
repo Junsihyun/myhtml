@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>현실적인 공복 운동 에너지 계산기</title>
+  <style>
+    body { font-family: Arial; background: #f2f5fa; padding: 30px; }
+    .container {
+      max-width: 900px;
+      background: white;
+      padding: 20px;
+      border: 2px solid #123d6b;
+      margin: auto;
+    }
+    label { margin-right: 10px; display: inline-block; margin-bottom: 10px; }
+    input, select { margin-right: 20px; padding: 5px; width: 100px; }
+    button {
+      background-color: #123d6b;
+      color: white;
+      padding: 7px 15px;
+      border: none;
+      cursor: pointer;
+    }
+    .result { margin-top: 20px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #999;
+      text-align: center;
+      padding: 6px;
+    }
+    th {
+      background-color: #123d6b;
+      color: white;
+    }
+    tr:nth-child(even) { background-color: #eef2f8; }
+    .red { color: red; font-weight: bold; }
+    .orange { color: orange; font-weight: bold; }
+    .highlight-border {
+      border: 3px solid #123d6b !important;
+      background-color: lightgreen !important;
+    }
+    .small { font-size: 0.85em; color: #444; }
+    .strong-warning {
+      color: #990000;
+      font-weight: bold;
+      margin-top: 20px;
+      padding: 10px;
+      border: 2px solid #990000;
+      background-color: #ffe0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>현실적인 공복 운동 연료 소모 계산기</h2>
+
+    <!-- 첫 줄: 성별, 나이, 키, 몸무게 -->
+    <div>
+      <label>성별
+        <select id="gender">
+          <option value="male">남성</option>
+          <option value="female">여성</option>
+        </select>
+      </label>
+      <label>나이 <input type="number" id="age"></label>
+      <label>키(cm) <input type="number" id="height"></label>
+      <label>몸무게(kg) <input type="number" id="weight"></label>
+    </div>
+
+    <!-- 둘째 줄: 공복시간, 운동 숙련도, 버튼 -->
+    <div style="margin-top: 10px;">
+      <label>공복 시간(시간) <input type="number" id="fastingHour" value="8"></label>
+      <label>운동 숙련도
+        <select id="fitnessLevel">
+          <option value="beginner">초보자</option>
+          <option value="intermediate">중급자</option>
+          <option value="advanced">상급자</option>
+        </select>
+      </label>
+      <button onclick="calculate()">계산하기</button>
+    </div>
+
+    <div class="result" id="resultArea"></div>
+  </div>
+
+  <script>
+    function pad(g) { return g < 10 ? "0" + g : g; }
+
+    function calculate() {
+      const gender = document.getElementById("gender").value;
+      const age = parseInt(document.getElementById("age").value);
+      const height_cm = parseFloat(document.getElementById("height").value);
+      const weight = parseFloat(document.getElementById("weight").value);
+      const fastingHour = parseFloat(document.getElementById("fastingHour").value);
+      const fitnessLevel = document.getElementById("fitnessLevel").value;
+
+      if (!age || !height_cm || !weight) {
+        alert("모든 항목을 입력해주세요.");
+        return;
+      }
+
+      const height_m = height_cm / 100;
+      const bmi = weight / (height_m * height_m);
+
+      let bodyFatPercentage = (1.20 * bmi) + (0.23 * age) - (gender === "male" ? 16.2 : 5.4);
+      bodyFatPercentage = Math.max(5, Math.min(50, bodyFatPercentage));
+
+      const fatMass = weight * (bodyFatPercentage / 100);
+      const leanMass = weight - fatMass;
+      const muscleMass = leanMass * 0.5;
+      const BMR = gender === "male"
+        ? 10 * weight + 6.25 * height_cm - 5 * age + 5
+        : 10 * weight + 6.25 * height_cm - 5 * age - 161;
+
+      const initialGlycogenMuscle = muscleMass * 15;
+      const initialGlycogenLiver = Math.round(leanMass * 1.2);
+      let liverReductionRate = fastingHour >= 16 ? 0.7 : fastingHour >= 12 ? 0.5 : fastingHour >= 8 ? 0.3 : 0;
+      const adjustedGlycogenLiver = Math.round(initialGlycogenLiver * (1 - liverReductionRate));
+
+      let ratioAdjustment = fitnessLevel === "intermediate" ? -0.05 : fitnessLevel === "advanced" ? -0.1 : 0;
+
+      const activities = [
+        { name: "걷기", MET: 3.5, ratioCurve: [0.4,0.35,0.3,0.25,0.22,0.2,0.18,0.16,0.15,0.14,0.13,0.12,0.11,0.1,0.1,0.1,0.1,0.1,0.1,0.1] },
+        { name: "빨리걷기", MET: 5.0, ratioCurve: [0.5,0.45,0.4,0.35,0.3,0.25,0.2,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15] },
+        { name: "슬로우조깅", MET: 6.0, ratioCurve: [0.5,0.45,0.4,0.35,0.3,0.25,0.2,0.15,0.15,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1] },
+        { name: "등산", MET: 9.0, ratioCurve: [0.4,0.35,0.3,0.25,0.2,0.15,0.12,0.1,0.08,0.06,0.05,0.04,0.035,0.03,0.025,0.02,0.015,0.01,0.007,0.005] }
+      ];
+
+      const times = Array.from({length: 20}, (_, i) => (i + 1) * 0.5);
+      let table = `<table><tr><th>시간</th>${activities.map(a => `<th>${a.name}</th>`).join("")}</tr>`;
+
+      const cumulative = {};
+      activities.forEach(a => cumulative[a.name] = { muscle: 0, liver: 0, fat: 0 });
+
+      times.forEach((t, i) => {
+        table += `<tr><td>${t * 60}분</td>`;
+        activities.forEach(a => {
+          const dt = 0.5;
+          const kcal = a.MET * weight * dt;
+          const r = Math.max(0, Math.min(1, a.ratioCurve[Math.min(i, a.ratioCurve.length - 1)] + ratioAdjustment));
+          const gG = (kcal * r) / 4;
+          const fG = (kcal * (1 - r)) / 9;
+          const mG = gG * 0.8;
+          const lG = gG * 0.2 + 0.3 * dt;
+
+          cumulative[a.name].muscle += mG;
+          cumulative[a.name].liver += lG;
+          cumulative[a.name].fat += fG;
+
+          const rm = initialGlycogenMuscle - cumulative[a.name].muscle;
+          const rl = adjustedGlycogenLiver - cumulative[a.name].liver;
+
+          let cls = "";
+          if (rl < 10 || rm < 40) cls = "red";
+          else if (rl <= 25 && rl > 20) cls = "highlight-border";
+          else if (rl < 20 || rm < 80) cls = "orange";
+
+          let risk = (a.name === "걷기" && t >= 4) ? '<br><span class="orange small">⚠️ 장시간 걷기: 수분/에너지 보충 필요</span>' : "";
+          table += `<td class="${cls}">M:${pad(Math.round(cumulative[a.name].muscle))}g / L:${pad(Math.round(rl))}g / F:${pad(Math.round(cumulative[a.name].fat))}g<br><span class='small'>🔥 ${Math.round(a.MET * weight * t)} kcal</span>${risk}</td>`;
+        });
+        table += `</tr>`;
+      });
+      table += `</table>`;
+
+      document.getElementById("resultArea").innerHTML = `
+        <p><strong>기초대사량:</strong> ${Math.round(BMR)} kcal</p>
+        <p><strong>체지방률:</strong> ${bodyFatPercentage.toFixed(1)}% | <strong>근육량:</strong> ${muscleMass.toFixed(1)}kg</p>
+        <p><strong>간 글리코겐:</strong> ${adjustedGlycogenLiver}g | <strong>근육 글리코겐:</strong> ${initialGlycogenMuscle.toFixed(0)}g</p>
+        <h4>운동 시 에너지 사용</h4>${table}
+        <p class="orange">🟠 간 글리코겐 < 20g 또는 근육 < 80g: 피로 누적</p>
+        <p class="red">🔴 간 글리코겐 < 10g 또는 근육 < 40g: 저혈당/근손실 위험</p>
+        <p class="strong-warning">⚠️ 장시간 운동 시 물, 탄수화물 보충은 필수입니다. 수치가 안전해 보여도 실제 인체는 더 복잡하게 반응합니다.</p>
+      `;
+    }
+  </script>
+</body>
+</html>
